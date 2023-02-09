@@ -1,15 +1,15 @@
 package com.whitedisk.white_disk.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.qiwenshare.common.anno.MyLog;
 import com.qiwenshare.common.result.RestResult;
 import com.qiwenshare.common.util.security.JwtUser;
 import com.qiwenshare.common.util.security.SessionUtil;
 import com.whitedisk.white_disk.component.FileDealComp;
-import com.whitedisk.white_disk.dto.file.BatchDeleteFileDTO;
-import com.whitedisk.white_disk.dto.file.CreateFileDTO;
-import com.whitedisk.white_disk.dto.file.RenameFileDTO;
-import com.whitedisk.white_disk.dto.file.SearchFileDTO;
+import com.whitedisk.white_disk.dto.file.*;
 import com.whitedisk.white_disk.service.api.IFileService;
+import com.whitedisk.white_disk.service.api.IUserFileService;
+import com.whitedisk.white_disk.vo.file.FileListVO;
 import com.whitedisk.white_disk.vo.file.SearchFileVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,19 +31,31 @@ public class FileController {
 
     @Autowired
     private IFileService fileService;
+    @Autowired
+    private IUserFileService userFileService;
 
     @Autowired
     private FileDealComp fileDealComp;
 
     private static final String CURRENT_MODULE="文件接口";
 
-    @Operation(summary = "创建文件", description = "目录(文件夹)的创建", tags = {"file"})
+    @Operation(summary = "创建文件", description = "文件的创建", tags = {"file"})
     @MyLog(operation = "创建文件", module = CURRENT_MODULE)
-    @PostMapping("/createfile")
+    @PostMapping("/createFile")
     @ResponseBody
-    public RestResult<String> createFile(@Valid @RequestBody CreateFileDTO createFileDTO){
+    public RestResult<Object> createFile(@Valid @RequestBody CreateFileDTO createFileDTO){
         JwtUser sessionUser = SessionUtil.getSession();
-        Boolean flag = fileService.createFile(createFileDTO, sessionUser);
+        String message =fileService.createFile(createFileDTO,sessionUser);
+        return RestResult.success().message(message);
+    }
+
+    @Operation(summary = "创建文件夹", description = "文件夹（目录）的创建", tags = {"file"})
+    @MyLog(operation = "创建文件夹", module = CURRENT_MODULE)
+    @PostMapping("/createFold")
+    @ResponseBody
+    public RestResult<String> createFold(@Valid @RequestBody CreateFoldDTO createFileDTO){
+        JwtUser sessionUser = SessionUtil.getSession();
+        Boolean flag = fileService.createFold(createFileDTO, sessionUser);
         if (!flag){
             return RestResult.fail().message("同名文件已存在");
         }
@@ -75,11 +87,18 @@ public class FileController {
     @MyLog(operation = "文件列表", module = CURRENT_MODULE)
     @GetMapping("/getfilelist")
     @ResponseBody
-    public RestResult getFileList( @Parameter(description = "文件路径", required = true) String filePath,
-                            @Parameter(description = "当前页", required = true) long currentPage,
-                            @Parameter(description = "页面数量", required = true) long pageCount){
+    public RestResult<FileListVO> getFileList(@Parameter(description = "文件类型", required = true) String fileType,
+                                              @Parameter(description = "文件路径", required = true) String filePath,
+                                              @Parameter(description = "当前页", required = true) long currentPage,
+                                              @Parameter(description = "页面数量", required = true) long pageCount){
         JwtUser sessionUser = SessionUtil.getSession();
-        return null;
+        if("0".equals(fileType)){
+            IPage<FileListVO> fileList = userFileService.userFileList(sessionUser.getUserId(),filePath,currentPage,currentPage);
+            return RestResult.success().dataList(fileList.getRecords(), fileList.getTotal());
+        }else {
+            IPage<FileListVO> fileList = userFileService.getFileByFileType(Integer.valueOf(fileType), currentPage, pageCount, sessionUser.getUserId());
+            return RestResult.success().dataList(fileList.getRecords(), fileList.getTotal());
+        }
     }
 
     @Operation(summary = "批量删除文件", description = "批量删除文件", tags = {"file"})

@@ -1,19 +1,24 @@
 package com.whitedisk.white_disk.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.IdUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.HighlighterEncoder;
 import co.elastic.clients.elasticsearch.core.search.Hit;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qiwenshare.common.util.DateUtil;
 import com.qiwenshare.common.util.security.JwtUser;
+import com.qiwenshare.common.util.security.SessionUtil;
+import com.qiwenshare.ufop.factory.UFOPFactory;
+import com.qiwenshare.ufop.operation.copy.Copier;
+import com.qiwenshare.ufop.operation.copy.domain.CopyFile;
 import com.whitedisk.white_disk.component.AsyncTaskComp;
 import com.whitedisk.white_disk.component.FileDealComp;
 import com.whitedisk.white_disk.config.es.FileSearch;
 import com.whitedisk.white_disk.dto.file.CreateFileDTO;
+import com.whitedisk.white_disk.dto.file.CreateFoldDTO;
 import com.whitedisk.white_disk.dto.file.RenameFileDTO;
 import com.whitedisk.white_disk.dto.file.SearchFileDTO;
 import com.whitedisk.white_disk.entity.FileEntity;
@@ -24,12 +29,18 @@ import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.utils.WhiteFileUtil;
 import com.whitedisk.white_disk.vo.file.SearchFileVO;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.util.encoders.UTF8;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ClassUtils;
 
 import javax.annotation.Resource;
+import java.io.FileInputStream;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * @author white
@@ -48,9 +59,83 @@ public class FileService extends ServiceImpl<FileMapper, FileEntity> implements 
     private ElasticsearchClient elasticsearchClient;
     @Autowired
     private AsyncTaskComp asyncTaskComp;
+    @Autowired
+    UFOPFactory ufopFactory;
+
+    @Value("${ufop.storage-type}")
+    private Integer storageType;
 
     @Override
-    public Boolean createFile(CreateFileDTO createFileDTO, JwtUser user) {
+    public String createFile(CreateFileDTO createFileDTO, JwtUser user) {
+        try{
+            String fileName = createFileDTO.getFileName();
+            String filePath = createFileDTO.getFilePath();
+            String extendName = createFileDTO.getExtendName();
+            String userId = user.getUserId();
+
+            List<UserFileEntity> userFileEntityList=userFileService.selectSameUserFile(fileName,filePath,extendName,userId);
+            if (userFileEntityList != null && !userFileEntityList.isEmpty()) {
+                return new String("同名文件已存在");
+            }
+
+            String uuid= UUID.randomUUID().toString().replaceAll("-", "");
+
+            String templateFilePath = "";
+            if ("docx".equals(extendName)) {
+                templateFilePath = "template/Word.docx";
+            } else if ("xlsx".equals(extendName)) {
+                templateFilePath = "template/Excel.xlsx";
+            } else if ("pptx".equals(extendName)) {
+                templateFilePath = "template/PowerPoint.pptx";
+            } else if ("txt".equals(extendName)) {
+                templateFilePath = "template/Text.txt";
+            } else if ("drawio".equals(extendName)) {
+                templateFilePath = "template/Drawio.drawio";
+            }
+
+            String url2= ClassUtils.getDefaultClassLoader().getResource("static/" + templateFilePath).getPath();
+            url2 = URLDecoder.decode(url2, "UTF-8");
+            FileInputStream inputStream = new FileInputStream(url2);
+            Copier copier = ufopFactory.getCopier();
+            CopyFile copyFile = new CopyFile();
+            copyFile.setExtendName(extendName);
+            String fileUrl = copier.copy(inputStream, copyFile);
+
+            FileEntity fileEntity = new FileEntity();
+            fileEntity.setFileId(IdUtil.getSnowflakeNextIdStr());
+            fileEntity.setFileSize(0L);
+            fileEntity.setFileUrl(fileUrl);
+            fileEntity.setStorageType(storageType);
+            fileEntity.setIdentifier(uuid);
+            fileEntity.setCreateTime(DateUtil.getCurrentTime());
+            fileEntity.setCreateUserId(SessionUtil.getSession().getUserId());
+            fileEntity.setFileStatus(1);
+
+            boolean saveFlag = this.save(fileEntity);
+
+            UserFileEntity userFile = new UserFileEntity();
+            if (saveFlag){
+                userFile.setUserFileId(IdUtil.getSnowflakeNextIdStr());
+                userFile.setUserId(userId);
+                userFile.setFileName(fileName);
+                userFile.setFilePath(filePath);
+                userFile.setDeleteFlag(0);
+                userFile.setIsDir(0);
+                userFile.setExtendName(extendName);
+                userFile.setUploadTime(DateUtil.getCurrentTime());
+                userFile.setFileId(fileEntity.getFileId());
+
+                userFileService.save(userFile);
+            }
+            return new String("文件创建成功");
+        }catch (Exception e){
+            log.debug(e.getMessage());
+            return new String(e.getMessage());
+        }
+    }
+
+    @Override
+    public Boolean createFold(CreateFoldDTO createFileDTO, JwtUser user) {
         boolean dirExist = fileDealComp.isDirExist(createFileDTO.getFileName(), createFileDTO.getFilePath(), user.getUserId());
         if(dirExist){
             return false;

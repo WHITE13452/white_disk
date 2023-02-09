@@ -28,7 +28,7 @@ public class FileEntity {
     private Long fileSize;
 
     @TableField(value = "fileStatus")
-    private Integer fileStatus;
+    private Integer fileStatus;//0-失效，1-生效
 
     @TableField(value = "storageType")
     private Integer storageType;//存储类型
