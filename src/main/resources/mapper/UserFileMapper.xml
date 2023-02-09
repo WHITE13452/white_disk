@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.whitedisk.white_disk.mapper.UserFileMapper">
+
+    <select id="selectUserFileByLikeRightFilePath" resultType="com.whitedisk.white_disk.entity.UserFileEntity">
+        select * from userfile
+        where (filePath = #{filePath} or filePath like concat(#{filePath},'/%'))
+            and userId=#{userId};
+            and deleteFlag = 0;
+    </select>
+
+</mapper>
