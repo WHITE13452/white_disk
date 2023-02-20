@@ -107,7 +107,13 @@ public class FileController {
     @ResponseBody
     public RestResult<String> deleteBatchOfFile(@RequestBody BatchDeleteFileDTO batchDeleteFileDTO){
         JwtUser sessionUser = SessionUtil.getSession();
-        return null;
+        String file = batchDeleteFileDTO.getFiles();
+        String[] files = file.split(",");
+        for (String userFileId : files) {
+            userFileService.deleteUserFile(userFileId,sessionUser);
+            fileDealComp.deleteESByUserFileId(userFileId);
+        }
+        return RestResult.success().message("删除成功");
     }
 
     @Operation(summary = "批量文件", description = "批量文件", tags = {"file"})
