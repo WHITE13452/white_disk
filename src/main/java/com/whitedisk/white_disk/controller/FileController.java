@@ -2,6 +2,7 @@ package com.whitedisk.white_disk.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.qiwenshare.common.anno.MyLog;
+import com.qiwenshare.common.exception.QiwenException;
 import com.qiwenshare.common.result.RestResult;
 import com.qiwenshare.common.util.security.JwtUser;
 import com.qiwenshare.common.util.security.SessionUtil;
@@ -9,6 +10,7 @@ import com.whitedisk.white_disk.component.FileDealComp;
 import com.whitedisk.white_disk.dto.file.*;
 import com.whitedisk.white_disk.service.api.IFileService;
 import com.whitedisk.white_disk.service.api.IUserFileService;
+import com.whitedisk.white_disk.vo.file.FileDetailVO;
 import com.whitedisk.white_disk.vo.file.FileListVO;
 import com.whitedisk.white_disk.vo.file.SearchFileVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -116,13 +118,49 @@ public class FileController {
         return RestResult.success().message("删除成功");
     }
 
-    @Operation(summary = "批量文件", description = "批量文件", tags = {"file"})
-    @MyLog(operation = "批量文件", module = CURRENT_MODULE)
+    @Operation(summary = "删除文件", description = "删除文件", tags = {"file"})
+    @MyLog(operation = "删除文件", module = CURRENT_MODULE)
     @PostMapping("/deletefile")
     @ResponseBody
-    public RestResult<String> deleteFile(@RequestBody BatchDeleteFileDTO batchDeleteFileDTO){
+    public RestResult<String> deleteFile(@RequestBody DeleteFileDTO deleteFileDTO){
         JwtUser sessionUser = SessionUtil.getSession();
-        return null;
+        userFileService.deleteUserFile(deleteFileDTO.getUserFileId(), sessionUser);
+        fileDealComp.deleteESByUserFileId(deleteFileDTO.getUserFileId());
+        return RestResult.success();
     }
 
+
+    @Operation(summary = "解压文件", description = "解压文件", tags = {"file"})
+    @MyLog(operation = "解压文件", module = CURRENT_MODULE)
+    @PostMapping("/unzipfile")
+    @ResponseBody
+    public RestResult<String> unzipFile(@RequestBody UnzipFileDTO unzipFileDTO){
+        try{
+            fileService.unzipFile(unzipFileDTO.getUserFileId(), unzipFileDTO.getUnzipMode(), unzipFileDTO.getFilePath());
+        }catch (QiwenException e){
+            return RestResult.fail().message(e.getMessage());
+        }
+        return RestResult.success();
+    }
+
+    @Operation(summary = "文件复制", description = "复制文件或者目录", tags = {"file"})
+    @MyLog(operation = "解压文件", module = CURRENT_MODULE)
+    @PostMapping("/copyfile")
+    @ResponseBody
+    public RestResult<String> copyFile(CopyFileDTO copyFileDTO){
+        JwtUser sessionUser = SessionUtil.getSession();
+        if(!fileService.copyFile(copyFileDTO,sessionUser)){
+            return RestResult.fail().message("原路径与目标路径冲突，不能复制");
+        }
+        return RestResult.success();
+    }
+
+    @Operation(summary = "查询文件详情", description = "查询文件详情", tags = {"file"})
+    @GetMapping(value = "/detail")
+    @ResponseBody
+    public RestResult<FileDetailVO> queryFileDetail(
+            @Parameter(description = "用户文件Id", required = true) String userFileId){
+        FileDetailVO vo = fileService.getFileDetail(userFileId);
+        return RestResult.success().data(vo);
+    }
 }

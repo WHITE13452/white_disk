@@ -19,6 +19,6 @@ public interface IUserFileService extends IService<UserFileEntity> {
     List<UserFileEntity> selectSameUserFile(String fileName, String filePath, String extendName, String userId);
     IPage<FileListVO> userFileList(String userId, String filePath, Long currentPage, Long pageCount);
     IPage<FileListVO> getFileByFileType(Integer fileTypeId, Long currentPage, Long pageCount, String userId);
-
     void deleteUserFile(String userFileId, JwtUser user);
+    void userFileCopy(String userFileId, String newfilePath, String userId);
 }

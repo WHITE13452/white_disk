@@ -2,11 +2,9 @@ package com.whitedisk.white_disk.service.api;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.qiwenshare.common.util.security.JwtUser;
-import com.whitedisk.white_disk.dto.file.CreateFileDTO;
-import com.whitedisk.white_disk.dto.file.CreateFoldDTO;
-import com.whitedisk.white_disk.dto.file.RenameFileDTO;
-import com.whitedisk.white_disk.dto.file.SearchFileDTO;
+import com.whitedisk.white_disk.dto.file.*;
 import com.whitedisk.white_disk.entity.FileEntity;
+import com.whitedisk.white_disk.vo.file.FileDetailVO;
 import com.whitedisk.white_disk.vo.file.SearchFileVO;
 
 import java.util.List;
@@ -37,7 +35,7 @@ public interface IFileService extends IService<FileEntity> {
      * @param user
      * @return
      */
-    List<SearchFileVO> searchFile(SearchFileDTO searchFileDTO,  JwtUser user);
+    List<SearchFileVO> searchFile(SearchFileDTO searchFileDTO, JwtUser user);
 
     /**
      * 重命名文件
@@ -46,5 +44,28 @@ public interface IFileService extends IService<FileEntity> {
      * @return
      */
     Boolean renameFile(RenameFileDTO renameFileDto, JwtUser user);
+
+    /**
+     * 解压文件接口
+     * @param userFileId
+     * @param unzipMode
+     * @param filePath
+     */
+    void unzipFile(String userFileId, int unzipMode, String filePath);
+
+    /**
+     * 复制文件接口
+     * @param copyFileDTO
+     * @param user
+     * @return
+     */
+    Boolean copyFile(CopyFileDTO copyFileDTO, JwtUser user);
+
+    /**
+     * 文件详情
+     * @param userFileId
+     * @return
+     */
+    FileDetailVO getFileDetail(String userFileId);
 
 }

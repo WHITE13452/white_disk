@@ -1,6 +1,7 @@
 package com.whitedisk.white_disk.service.impl;
 
 import cn.hutool.core.net.URLDecoder;
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -10,6 +11,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qiwenshare.common.util.DateUtil;
 import com.qiwenshare.common.util.security.JwtUser;
 import com.qiwenshare.common.util.security.SessionUtil;
+import com.whitedisk.white_disk.component.FileDealComp;
 import com.whitedisk.white_disk.dto.file.BatchDeleteFileDTO;
 import com.whitedisk.white_disk.entity.RecoveryFile;
 import com.whitedisk.white_disk.entity.UserFileEntity;
@@ -20,6 +22,7 @@ import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.vo.file.FileListVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
@@ -35,12 +38,15 @@ import java.util.concurrent.Executors;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor=Exception.class)
 public class UserFileService extends ServiceImpl<UserFileMapper, UserFileEntity> implements IUserFileService {
 
     @Resource
     private UserFileMapper userFileMapper;
     @Resource
     private RecoveryFileMapper recoveryFileMapper;
+    @Resource
+    private FileDealComp fileDealComp;
 
     private static Executor executor= Executors.newFixedThreadPool(20);
 
@@ -123,6 +129,47 @@ public class UserFileService extends ServiceImpl<UserFileMapper, UserFileEntity>
         recoveryFile.setDeleteBatchNum(uuid);
         recoveryFileMapper.insert(recoveryFile);
 
+    }
+
+    @Override
+    public void userFileCopy(String userFileId, String newfilePath, String userId) {
+        UserFileEntity userFile = userFileMapper.selectById(userFileId);
+        String oldFilePath = userFile.getFilePath();
+        String fileName = userFile.getFileName();
+
+        userFile.setFilePath(newfilePath);
+        userFile.setFileName(fileName);
+        if(userFile.getIsDir() == 0){
+            String repeatFileName = fileDealComp.getRepeatFileName(userFile, userFile.getFilePath());
+            userFile.setFileName(repeatFileName);
+        }
+        try{
+            userFileMapper.insert(userFile);
+        }catch (Exception e){
+            log.warn(e.getMessage());
+        }
+
+        oldFilePath = new WhiteFile(oldFilePath,fileName,true).getPath();
+        newfilePath = new WhiteFile(newfilePath,fileName,true).getPath();
+
+        //若是目录，移动子文件
+        if(userFile.isDirectory()){
+            List<UserFileEntity> subUserFileList = userFileMapper.selectUserFileByLikeRightFilePath(oldFilePath, userId);
+
+            for (UserFileEntity newUserFile : subUserFileList) {
+                newUserFile.setFilePath(newUserFile.getFilePath().replaceFirst(oldFilePath, newfilePath));
+                newUserFile.setUserFileId(IdUtil.getSnowflakeNextIdStr());
+                if(newUserFile.isDirectory()){
+                    String repeatFileName = fileDealComp.getRepeatFileName(newUserFile, newUserFile.getFilePath());
+                    newUserFile.setFileName(repeatFileName);
+                }
+                try {
+                    userFileMapper.insert(newUserFile);
+                } catch (Exception e) {
+                    log.warn(e.getMessage());
+                }
+            }
+        }
     }
 
 

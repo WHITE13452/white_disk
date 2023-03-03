@@ -39,7 +39,7 @@ public class WhiteFileUtil {
         return userFile;
     }
 
-    public static UserFileEntity searchQiwenFileParam(UserFileEntity userFile) {
+    public static UserFileEntity searchWhiteFileParam(UserFileEntity userFile) {
         UserFileEntity param = new UserFileEntity();
         param.setFilePath(WhiteFile.formatPath(userFile.getFilePath()));
         param.setFileName(userFile.getFileName());

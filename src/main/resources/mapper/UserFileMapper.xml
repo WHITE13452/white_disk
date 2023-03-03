@@ -57,4 +57,11 @@
         ORDER BY isDir desc
     </select>
 
+    <select id="selectStorageSizeByUserId" resultType="java.lang.Long" parameterType="java.lang.String">
+        select SUM(fileSize)
+        from userfile
+        LEFT JOIN file ON file.fileId = userfile.fileId
+        where userfile.userId = #{userId}
+    </select>
+
 </mapper>
