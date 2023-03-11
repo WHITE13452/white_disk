@@ -7,5 +7,5 @@ import lombok.Data;
  */
 @Data
 public class JwtPayload {
-    RegisterdClaims registerdClaims;
+    private RegisterdClaims registerdClaims;
 }

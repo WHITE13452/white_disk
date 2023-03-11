@@ -53,5 +53,7 @@ public class UserEntity {
     private String modifyTime;
     @TableField(value = "modifyUserId")
     private Long modifyUserId;
+    @TableField(value = "wxOpenId")
+    private String wxOpenId;
 
 }

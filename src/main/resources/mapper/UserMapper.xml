@@ -6,9 +6,15 @@
 
 <mapper namespace="com.whitedisk.white_disk.mapper.UserMapper">
 
-    <insert id="insertUserRole" parameterType="Long">
+
+    <insert id="inserUser" parameterType="com.whitedisk.white_disk.entity.user.UserEntity">
+        INSERT INTO user (userId, username, salt, PASSWORD,  telephone, sex, imageUrl, registerTime, available)
+        VALUES (#{userId}, #{username},#{salt}, #{password}, #{telephone}, #{sex}, #{imageUrl}, #{registerTime}, 1);
+    </insert>
+
+    <insert id="insertUserRole">
         INSERT INTO user_role (userId, roleId)
-        VALUES (#{param1}, #{param2});
+        VALUES (#{userId}, #{roleId});
     </insert>
 
 <!--    <select id="selectRoleListByUserId" resultType="com.whitedisk.white_disk.entity.user.Role">-->

@@ -27,13 +27,6 @@ public interface IUserService extends IService<UserEntity> {
      */
     RestResult<String>  registerUser(RegisterDTO registerDTO);
 
-    /**
-     * 登录
-     * @param telephone
-     * @param password
-     * @return
-     */
-    RestResult<UserLoginVO> userLogin(String telephone,String password);
 
     /**
      * 根据电话号码拿到用户信息

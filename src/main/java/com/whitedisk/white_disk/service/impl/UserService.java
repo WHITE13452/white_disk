@@ -1,6 +1,7 @@
 package com.whitedisk.white_disk.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.IdUtil;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -103,9 +104,9 @@ public class UserService extends ServiceImpl<UserMapper,UserEntity> implements I
         userEntity.setSalt(saltValue);
         userEntity.setPassword(newPassword);
         userEntity.setRegisterTime(DateUtil.getCurrentTime());
-        userEntity.setAvailable(1);
+        userEntity.setUserId(IdUtil.getSnowflakeNextIdStr());
 
-        int result = userMapper.insert(userEntity);
+        int result = userMapper.inserUser(userEntity);
         userMapper.insertUserRole(userEntity.getUserId(),2);
         if (result == 1) {
             return RestResult.success();
@@ -113,39 +114,6 @@ public class UserService extends ServiceImpl<UserMapper,UserEntity> implements I
             return RestResult.fail().message("注册用户失败，请检查输入信息！");
         }
     }
-
-    @Override
-    public RestResult<UserLoginVO> userLogin(String telephone, String password) {
-        RestResult<UserLoginVO> loginVo=new RestResult<UserLoginVO>();
-        String salt = this.getSaltByTelephone(telephone);
-        String hashPassword = HashUtils.hashHex("MD5", password, salt, 1024);
-        UserEntity userEntity=this.selectUserByTelephoneAndPassword(telephone, hashPassword);
-        if(userEntity==null){
-            return RestResult.fail().message("用户名或密码错误");
-        }
-
-        Map<String,Object> param=new HashMap<>();
-        param.put("userId",userEntity.getUserId());
-        String token="";
-        try{
-            token=jwtComp.createJWT(param);
-        }catch (Exception e){
-            log.info("登陆失败：{}");
-            return RestResult.fail().message("创建token失败");
-        }
-        UserEntity sessionUserEntity=this.findUserInfoByTelephone(telephone);
-        if(sessionUserEntity.getAvailable() != null && sessionUserEntity.getAvailable() == 0){
-            return RestResult.fail().message("用户已被禁用");
-        }
-        UserLoginVO userLoginVO=new UserLoginVO();
-        BeanUtil.copyProperties(sessionUserEntity,userLoginVO);
-        userLoginVO.setToken(token);
-        loginVo.setData(userLoginVO);
-        loginVo.setCode(200001);
-        loginVo.setSuccess(true);
-        return loginVo;
-    }
-
 
     @Override
     public UserEntity findUserInfoByTelephone(String telephone) {

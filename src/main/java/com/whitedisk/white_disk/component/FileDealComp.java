@@ -3,6 +3,7 @@ package com.whitedisk.white_disk.component;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.IdUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.qiwenshare.common.util.MusicUtils;
 import com.qiwenshare.ufop.factory.UFOPFactory;
@@ -12,12 +13,13 @@ import com.qiwenshare.ufop.util.UFOPUtils;
 import com.whitedisk.white_disk.config.es.ElasticSearchConfig;
 import com.whitedisk.white_disk.config.es.FileSearch;
 import com.whitedisk.white_disk.entity.Music;
+import com.whitedisk.white_disk.entity.Share;
+import com.whitedisk.white_disk.entity.ShareFile;
 import com.whitedisk.white_disk.entity.UserFileEntity;
 import com.whitedisk.white_disk.mapper.FileMapper;
 import com.whitedisk.white_disk.mapper.MusicMapper;
 import com.whitedisk.white_disk.mapper.UserFileMapper;
-import com.whitedisk.white_disk.service.api.IFileService;
-import com.whitedisk.white_disk.service.api.IUserFileService;
+import com.whitedisk.white_disk.service.api.*;
 import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.utils.WhiteFileUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -59,13 +61,19 @@ public class FileDealComp {
     @Resource
     private FileMapper fileMapper;
     @Resource
+    private IUserService userService;
+    @Resource
+    private IShareService shareService;
+    @Resource
+    private IShareFileService shareFileService;
+    @Resource
     private UserFileMapper userFileMapper;
     @Resource
     private MusicMapper musicMapper;
     @Resource
     private UFOPFactory ufopFactory;
-    @Autowired
-    private IUserFileService userFileService;
+//    @Autowired
+//    private IUserFileService userFileService;
     @Autowired
     private ElasticsearchClient elasticsearchClient;
 
@@ -78,7 +86,7 @@ public class FileDealComp {
                 .eq(UserFileEntity::getUserId, userId)
                 .eq(UserFileEntity::getDeleteFlag, 0)
                 .eq(UserFileEntity::getIsDir, 1);
-        List<UserFileEntity> list = userFileService.list(wrapper);
+        List<UserFileEntity> list = userFileMapper.selectList(wrapper);
         if (list == null && !list.isEmpty()) {
             return true;
         }
@@ -341,6 +349,58 @@ public class FileDealComp {
                 }
             }
         }
+    }
+
+    public boolean checkAuthDownloadAndPreview(String shareBatchNum,
+                                               String extractionCode,
+                                               String token,
+                                               String userFileId,
+                                               Integer platform) {
+        log.debug("权限检查开始：shareBatchNum:{}, extractionCode:{}, token:{}, userFileId{}" , shareBatchNum, extractionCode, token, userFileId);
+        if (platform != null && platform == 2) {
+            return true;
+        }
+        UserFileEntity userFile = userFileMapper.selectById(userFileId);
+        log.debug(JSON.toJSONString(userFile));
+        if ("undefined".equals(shareBatchNum)  || StringUtils.isEmpty(shareBatchNum)) {
+
+            String userId = userService.getUserIdByToken(token);
+            log.debug(JSON.toJSONString("当前登录session用户id：" + userId));
+            if (userId == null) {
+                return false;
+            }
+            log.debug("文件所属用户id：" + userFile.getUserId());
+            log.debug("登录用户id:" + userId);
+            if (!userFile.getUserId().equals(userId)) {
+                log.info("用户id不一致，权限校验失败");
+                return false;
+            }
+        } else {
+            Map<String, Object> param = new HashMap<>();
+            param.put("shareBatchNum", shareBatchNum);
+            List<Share> shareList = shareService.listByMap(param);
+            //判断批次号
+            if (shareList.size() <= 0) {
+                log.info("分享批次号不存在，权限校验失败");
+                return false;
+            }
+            Integer shareType = shareList.get(0).getShareType();
+            if (1 == shareType) {
+                //判断提取码
+                if (!shareList.get(0).getExtractionCode().equals(extractionCode)) {
+                    log.info("提取码错误，权限校验失败");
+                    return false;
+                }
+            }
+            param.put("userFileId", userFileId);
+            List<ShareFile> shareFileList = shareFileService.listByMap(param);
+            if (shareFileList.size() <= 0) {
+                log.info("用户id和分享批次号不匹配，权限校验失败");
+                return false;
+            }
+
+        }
+        return true;
     }
 
 

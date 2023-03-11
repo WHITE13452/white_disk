@@ -20,7 +20,7 @@ import java.util.Map;
  * 系统参数管理
  */
 @RestController
-@RequestMapping("/sysParam")
+@RequestMapping("/param")
 @Slf4j
 public class SysParaController {
 
@@ -30,11 +30,13 @@ public class SysParaController {
     @Operation(summary = "查询系统参数组", tags = {"系统参数管理"})
     @GetMapping ("/grouplist")
     @ResponseBody
-    public RestResult<Map> groupList(@RequestParam QueryGroupParamDTO groupParamDTO){
+    public RestResult<Map> groupList(@Parameter(required = false) QueryGroupParamDTO groupParamDTO){
         Map<String,Object> result=new HashMap<>();
+
         QueryWrapper<SysParam> wrapper=new QueryWrapper<>();
-        wrapper.lambda().eq(SysParam::getGroupName,groupParamDTO.getGroupName());
+        wrapper.lambda().eq(SysParam::getGroupName, groupParamDTO.getGroupName());
         List<SysParam> list=sysParamService.list(wrapper);
+
         for (SysParam sysParam : list) {
             result.put(sysParam.getSysParamKey(), sysParam.getSysParamValue());
         }

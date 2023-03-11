@@ -89,13 +89,14 @@ public class FileController {
     @MyLog(operation = "文件列表", module = CURRENT_MODULE)
     @GetMapping("/getfilelist")
     @ResponseBody
-    public RestResult<FileListVO> getFileList(@Parameter(description = "文件类型", required = true) String fileType,
-                                              @Parameter(description = "文件路径", required = true) String filePath,
-                                              @Parameter(description = "当前页", required = true) long currentPage,
-                                              @Parameter(description = "页面数量", required = true) long pageCount){
+    public RestResult<FileListVO> getFileList(
+            @Parameter(description = "文件类型", required = true) String fileType,
+            @Parameter(description = "文件路径", required = true) String filePath,
+            @Parameter(description = "当前页", required = true) long currentPage,
+            @Parameter(description = "页面数量", required = true) long pageCount){
         JwtUser sessionUser = SessionUtil.getSession();
         if("0".equals(fileType)){
-            IPage<FileListVO> fileList = userFileService.userFileList(sessionUser.getUserId(),filePath,currentPage,currentPage);
+            IPage<FileListVO> fileList = userFileService.userFileList(null,filePath,currentPage,currentPage);
             return RestResult.success().dataList(fileList.getRecords(), fileList.getTotal());
         }else {
             IPage<FileListVO> fileList = userFileService.getFileByFileType(Integer.valueOf(fileType), currentPage, pageCount, sessionUser.getUserId());
@@ -144,7 +145,7 @@ public class FileController {
     }
 
     @Operation(summary = "文件复制", description = "复制文件或者目录", tags = {"file"})
-    @MyLog(operation = "解压文件", module = CURRENT_MODULE)
+    @MyLog(operation = "文件复制", module = CURRENT_MODULE)
     @PostMapping("/copyfile")
     @ResponseBody
     public RestResult<String> copyFile(CopyFileDTO copyFileDTO){

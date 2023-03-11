@@ -36,27 +36,30 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     String whiteDiskVersion;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String version= sysParamService.getValue("version");
-        if(!whiteDiskVersion.equals(version)){
+        String version = sysParamService.getValue("version");
+        if (!whiteDiskVersion.equals(version)) {
             throw new QiwenException(999999, "脚本未初始化，请在数据库执行数据初始化脚本，存放路径： '/resources/import.sql'！");
         }
 
-        String token=request.getHeader("token");
-        if (StringUtils.isNotBlank(token) && !"undefined".equals(token)){
-            String userId= userService.getUserIdByToken(token);
+        String token = request.getHeader("token");
+        if (StringUtils.isNotBlank(token) && !"undefined".equals(token)) {
 
-            if(userId != null && SecurityContextHolder.getContext().getAuthentication() == null){
+            String userId = userService.getUserIdByToken(token);
+
+            // 验证
+            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userService.loadUserByUsername(String.valueOf(userId));
-                if(userDetails.isEnabled()){
-                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails
-                    , null, userDetails.getAuthorities());
-                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                if (userDetails.isEnabled()) {
+                    UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    usernamePasswordAuthenticationToken
+                            .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
                 }
             }
         }
-        filterChain.doFilter(request, response);
+        chain.doFilter(request, response);
     }
 }

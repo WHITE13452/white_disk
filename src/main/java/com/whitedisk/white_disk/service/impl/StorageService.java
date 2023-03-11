@@ -65,4 +65,30 @@ public class StorageService extends ServiceImpl<StorageMapper, StorageEntity> im
         }
         return true;
     }
+
+    @Override
+    public Long getTotalStorageSize(String userId) {
+        LambdaQueryWrapper<StorageEntity> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(StorageEntity::getUserId,userId);
+
+        StorageEntity storageEntity = storageMapper.selectOne(queryWrapper);
+        Long totalStorageSize = null;
+        if (storageEntity == null || storageEntity.getTotalStorageSize() == null) {
+            LambdaQueryWrapper<SysParam> queryWrapper1 = new LambdaQueryWrapper<>();
+            queryWrapper1.eq(SysParam::getSysParamKey,"totalStorageSize");
+            SysParam sysParam = sysParamMapper.selectOne(queryWrapper1);
+            totalStorageSize = Long.valueOf(sysParam.getSysParamValue());
+            storageEntity = new StorageEntity();
+            storageEntity.setTotalStorageSize(totalStorageSize);
+            storageEntity.setUserId(userId);
+            storageMapper.insert(storageEntity);
+        } else {
+            totalStorageSize = storageEntity.getTotalStorageSize();
+        }
+
+        if (totalStorageSize != null){
+            totalStorageSize = totalStorageSize * 1024 * 1024;
+        }
+        return totalStorageSize;
+    }
 }

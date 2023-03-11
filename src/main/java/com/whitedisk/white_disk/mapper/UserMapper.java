@@ -16,8 +16,9 @@ import java.util.List;
 
 public interface UserMapper extends BaseMapper<UserEntity> {
 
+    int inserUser(UserEntity userEntity);
     List<Role> selectRoleListByUserId(@Param("userId") String userId);
     String getSaltByTelephone(@Param("telephone") String telephone);
-    Integer insertUserRole(@Param("userId") String userId,@Param("roleId") long roleId);
+    int insertUserRole(@Param("userId") String userId, @Param("roleId") long roleId);
 
 }

@@ -13,7 +13,7 @@
             and deleteFlag = 0;
     </select>
 
-    <select id="selectPageVo" parameterType="com.whitedisk.white_disk.entity.UserFileEntity">
+    <select id="selectPageVo" parameterType="com.whitedisk.white_disk.entity.UserFileEntity" resultType="com.whitedisk.white_disk.vo.file.FileListVO">
         select * from userfile a
         left join image on a.fileId = image.fileId
         left join file on file.fileId = a.fileId

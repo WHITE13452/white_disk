@@ -14,4 +14,6 @@ public interface IStorageService extends IService<StorageEntity> {
      * @return
      */
     boolean checkStorage(String userId, Long fileSize);
+
+    Long getTotalStorageSize(String userId);
 }

@@ -10,9 +10,5 @@ import com.whitedisk.white_disk.vo.user.UserLoginVO;
  * @author white
  */
 public interface IUserLoginInfoService extends IService<UserLoginInfoEntity> {
-    /**
-     * 验证用户登录token
-     * @return
-     */
-    RestResult<UserLoginVO> checkLoginUserInfo(JwtUser sessionUserEntity);
+
 }

@@ -27,28 +27,4 @@ import javax.annotation.Resource;
 @Transactional(rollbackFor=Exception.class)
 public class UserLoginInfoImplService extends ServiceImpl<UserLoginInfoMapper, UserLoginInfoEntity> implements IUserLoginInfoService {
 
-    @Resource
-    private UserLoginInfoMapper userLoginInfoMapper;
-    @Autowired
-    private IUserService userService;
-
-    @Override
-    public RestResult<UserLoginVO> checkLoginUserInfo(JwtUser sessionUserEntity) {
-        UserLoginVO userLoginVO=new UserLoginVO();
-
-        if(sessionUserEntity != null && "anonymousUser".equals(sessionUserEntity.getUsername())){
-            LambdaQueryWrapper<UserLoginInfoEntity> wrapper=new LambdaQueryWrapper<>();
-            wrapper.eq(UserLoginInfoEntity::getUserId,sessionUserEntity.getUserId());
-            wrapper.likeRight(UserLoginInfoEntity::getUserloginDate, DateUtil.getCurrentTime().substring(0,10));
-            userLoginInfoMapper.delete(wrapper);
-            UserLoginInfoEntity userLoginInfo=new UserLoginInfoEntity();
-            userLoginInfo.setUserId(sessionUserEntity.getUserId());
-            userLoginInfo.setUserloginDate(DateUtil.getCurrentTime());
-            userLoginInfoMapper.insert(userLoginInfo);
-            UserEntity user=userService.getById(sessionUserEntity.getUserId());
-            BeanUtil.copyProperties(user,userLoginVO);
-            return RestResult.success().data(userLoginVO);
-        }
-        return RestResult.fail().message("用户未登录");
-    }
 }

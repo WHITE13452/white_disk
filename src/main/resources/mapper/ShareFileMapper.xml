@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.whitedisk.white_disk.mapper.ShareFileMapper">
+
+
+    <select id="selectShareFileList" resultType="com.whitedisk.white_disk.vo.file.ShareFileListVO">
+        select * from sharefile a
+                          LEFT JOIN share ON share.shareBatchNum = a.shareBatchNum
+                          left join userfile b on b.userFileId = a.userFileId
+                          left join file c on c.fileId = b.fileId
+        where a.shareBatchNum = #{shareBatchNum}
+          and a.shareFilePath = #{shareFilePath}
+    </select>
+
+
+</mapper>

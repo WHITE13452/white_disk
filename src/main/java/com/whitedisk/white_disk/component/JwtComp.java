@@ -8,7 +8,7 @@ import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.impl.DefaultClaims;
-import org.apache.commons.net.util.Base64;
+import org.apache.commons.codec.binary.Base64;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -27,54 +27,47 @@ public class JwtComp {
     @Resource
     JwtProperties jwtProperties;
 
-    /**
-     * 生成加密key
-     * @return
-     */
-    private SecretKey generalKey(){
-        byte[] encodeKey = Base64.decodeBase64(jwtProperties.getSecret());
 
-        SecretKey key = new SecretKeySpec(encodeKey,0, encodeKey.length, "AES");
+    // 由字符串生成加密key
+    private SecretKey generalKey() {
+        // 本地的密码解码
+        byte[] encodedKey = Base64.decodeBase64(jwtProperties.getSecret());
+        // 根据给定的字节数组使用AES加密算法构造一个密钥
+        SecretKey key = new SecretKeySpec(encodedKey, 0, encodedKey.length, "AES");
         return key;
     }
 
-    /**
-     * 创建jwt
-     * @param param
-     * @return
-     */
-    public String createJWT(Map<String,Object> param){
+    // 创建jwt
+    public String createJWT(Map<String, Object> param) {
         String subject = JSON.toJSONString(param);
-        //生成jwt的时间
+        // 生成JWT的时间
         long nowTime = System.currentTimeMillis();
         Date nowDate = new Date(nowTime);
+        // 生成签名的时候使用的秘钥secret，切记这个秘钥不能外露，是你服务端的私钥，在任何场景都不应该流露出去，一旦客户端得知这个secret，那就意味着客户端是可以自我签发jwt的
         SecretKey key = generalKey();
-        Double expTime = CalculatorUtils.conversion(jwtProperties.getPayload().getRegisterdClaims().getExp());
-        //为payload添加标准声名和私有声明
+        Double expireTime = CalculatorUtils.conversion(jwtProperties.getPayload().getRegisterdClaims().getExp());
+
+        // 为payload添加各种标准声明和私有声明
         DefaultClaims defaultClaims = new DefaultClaims();
         defaultClaims.setIssuer(jwtProperties.getPayload().getRegisterdClaims().getIss());
-        defaultClaims.setExpiration(new Date(System.currentTimeMillis() + expTime.longValue()));
+        defaultClaims.setExpiration(new Date(System.currentTimeMillis() + expireTime.longValue()));
         defaultClaims.setSubject(subject);
         defaultClaims.setAudience(jwtProperties.getPayload().getRegisterdClaims().getAud());
 
-        JwtBuilder jwtBuilder= Jwts.builder()
+        JwtBuilder builder = Jwts.builder() // 表示new一个JwtBuilder，设置jwt的body
                 .setClaims(defaultClaims)
-                .setIssuedAt(nowDate)
-                .signWith(SignatureAlgorithm.forName(jwtProperties.getHeader().getAlg()),key);
-        return jwtBuilder.compact();
+                .setIssuedAt(nowDate) // iat(issuedAt)：jwt的签发时间
+                .signWith(SignatureAlgorithm.forName(jwtProperties.getHeader().getAlg()), key); // 设置签名，使用的是签名算法和签名使用的秘钥
+
+        return builder.compact();
     }
 
-    /**
-     * 解密jwt
-     * @param jwt
-     * @return
-     */
-    public Claims parseJWT(String jwt){
-        SecretKey key = generalKey();   //拿到签名密钥
-        Claims claims = Jwts.parser() //得到DefaultJwtParser
-                .setSigningKey(key)//设置签名密钥
-                .parseClaimsJws(jwt)
-                .getBody();//拿到要解析的jwt
+    // 解密jwt
+    public Claims parseJWT(String jwt) throws Exception {
+        SecretKey key = generalKey(); // 签名秘钥，和生成的签名的秘钥一模一样
+        Claims claims = Jwts.parser() // 得到DefaultJwtParser
+                .setSigningKey(key) // 设置签名的秘钥
+                .parseClaimsJws(jwt).getBody(); // 设置需要解析的jwt
         return claims;
     }
 }
