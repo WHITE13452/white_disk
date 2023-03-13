@@ -213,6 +213,15 @@ public class UserFileService extends ServiceImpl<UserFileMapper, UserFileEntity>
 
     }
 
+    @Override
+    public List<UserFileEntity> selectFilePathTreeByUserId(String userId) {
+        LambdaQueryWrapper<UserFileEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserFileEntity::getUserId, userId)
+                .eq(UserFileEntity::getIsDir, true)
+                .eq(UserFileEntity::getDeleteFlag, 0);
+        return userFileMapper.selectList(wrapper);
+    }
+
 
     private void updateFileDeleteStateByFilePath(String filePath,String deleteBatchNum,String userId){
         executor.execute(()->{

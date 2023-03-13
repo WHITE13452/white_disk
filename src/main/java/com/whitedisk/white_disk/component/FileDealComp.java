@@ -20,6 +20,7 @@ import com.whitedisk.white_disk.mapper.FileMapper;
 import com.whitedisk.white_disk.mapper.MusicMapper;
 import com.whitedisk.white_disk.mapper.UserFileMapper;
 import com.whitedisk.white_disk.service.api.*;
+import com.whitedisk.white_disk.utils.TreeNode;
 import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.utils.WhiteFileUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -44,10 +45,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -403,5 +401,81 @@ public class FileDealComp {
         return true;
     }
 
+    /**
+     * 组织一个树目录节点，文件移动的时候使用
+     * @param treeNode
+     * @param id
+     * @param filePath
+     * @param nodeNameQueue
+     * @return
+     */
+    public TreeNode insertTreeNode(TreeNode treeNode, long id, String filePath, Queue<String> nodeNameQueue){
+
+        List<TreeNode> childrenTreeNodes = treeNode.getChildren();
+        String currentNodeName = nodeNameQueue.peek();
+        if (currentNodeName == null){
+            return treeNode;
+        }
+
+        WhiteFile whiteFile = new WhiteFile(filePath, currentNodeName, true);
+        filePath = whiteFile.getPath();
+
+        //1、判断有没有该子节点，如果没有则插入
+        if (!isExistPath(childrenTreeNodes, currentNodeName)){
+            //插入
+            TreeNode resultTreeNode = new TreeNode();
+
+            resultTreeNode.setFilePath(filePath);
+            resultTreeNode.setLabel(nodeNameQueue.poll());
+            resultTreeNode.setId(++id);
+
+            childrenTreeNodes.add(resultTreeNode);
+
+        }else{  //2、如果有，则跳过
+            nodeNameQueue.poll();
+        }
+
+        if (nodeNameQueue.size() != 0) {
+            for (int i = 0; i < childrenTreeNodes.size(); i++) {
+
+                TreeNode childrenTreeNode = childrenTreeNodes.get(i);
+                if (currentNodeName.equals(childrenTreeNode.getLabel())){
+                    childrenTreeNode = insertTreeNode(childrenTreeNode, id * 10, filePath, nodeNameQueue);
+                    childrenTreeNodes.remove(i);
+                    childrenTreeNodes.add(childrenTreeNode);
+                    treeNode.setChildren(childrenTreeNodes);
+                }
+
+            }
+        }else{
+            treeNode.setChildren(childrenTreeNodes);
+        }
+
+        return treeNode;
+
+    }
+
+    /**
+     * 判断该路径在树节点中是否已经存在
+     * @param childrenTreeNodes
+     * @param path
+     * @return
+     */
+    public boolean isExistPath(List<TreeNode> childrenTreeNodes, String path){
+        boolean isExistPath = false;
+
+        try {
+            for (int i = 0; i < childrenTreeNodes.size(); i++){
+                if (path.equals(childrenTreeNodes.get(i).getLabel())){
+                    isExistPath = true;
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+
+        return isExistPath;
+    }
 
 }

@@ -11,6 +11,7 @@ import com.whitedisk.white_disk.dto.file.*;
 import com.whitedisk.white_disk.entity.UserFileEntity;
 import com.whitedisk.white_disk.service.api.IFileService;
 import com.whitedisk.white_disk.service.api.IUserFileService;
+import com.whitedisk.white_disk.utils.TreeNode;
 import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.vo.file.FileDetailVO;
 import com.whitedisk.white_disk.vo.file.FileListVO;
@@ -25,7 +26,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 /**
  * @author white
@@ -182,7 +186,72 @@ public class FileController {
         userFileService.updateFilepathByUserFileId(moveFileDTO.getUserFileId(), newPath, jwtUser.getUserId());
         fileDealComp.deleteRepeatSubDirFile(newPath, jwtUser.getUserId());
         return RestResult.success();
+    }
 
+    @Operation(summary = "批量移动文件", description = "可以同时选择移动多个文件或者目录", tags = {"file"})
+    @PostMapping("/batchmovefile")
+    @MyLog(operation = "批量移动文件", module = CURRENT_MODULE)
+    @ResponseBody
+    public RestResult<String> batchMoveFile(@RequestBody BatchMoveFileDTO batchMoveFileDTO){
+        JwtUser jwtUser = SessionUtil.getSession();
+
+        String newFilePath = batchMoveFileDTO.getFilePath();
+
+        //拿到userFileId数组
+        String userFileIds = batchMoveFileDTO.getUserFileIds();
+        String[] userFileIdArr = userFileIds.split(",");
+        for (String userFileId : userFileIdArr) {
+            UserFileEntity userFile = userFileService.getById(userFileId);
+            //if its a dir
+            if (StringUtil.isEmpty(userFile.getExtendName())) {
+                WhiteFile whiteFile = new WhiteFile(userFile.getFilePath(), userFile.getFileName(), true);
+                if (newFilePath.startsWith(whiteFile.getPath() + WhiteFile.separator) || newFilePath.equals(whiteFile.getPath())) {
+                    return RestResult.fail().message("换个路径吧，别在一个文件夹里转悠");
+                }
+            }
+            userFileService.updateFilepathByUserFileId(userFile.getUserFileId(), newFilePath, jwtUser.getUserId());
+        }
+        return RestResult.success().data("批量移动文件成功");
+    }
+
+    @Operation(summary = "获取文件树", description = "文件移动的时候需要用到该接口，用来展示目录树", tags = {"file"})
+    @MyLog(operation = "获取文件树", module = CURRENT_MODULE)
+    @GetMapping(value = "/getfiletree")
+    @ResponseBody
+    public RestResult<TreeNode> getFileTree(){
+        RestResult<TreeNode> result = new RestResult<>();
+        JwtUser jwtUser = SessionUtil.getSession();
+        List<UserFileEntity> userFileList = userFileService.selectFilePathTreeByUserId(jwtUser.getUserId());
+        TreeNode treeNode = new TreeNode();
+        treeNode.setLabel(WhiteFile.separator);
+        treeNode.setId(0L);
+        long id = 1;
+        for (int i = 0; i < userFileList.size(); i++) {
+            UserFileEntity userFile = userFileList.get(i);
+            WhiteFile whiteFile = new WhiteFile(userFile.getFilePath(), userFile.getFileName(), false);
+            String filePath = whiteFile.getPath();
+
+            Queue<String> queue = new LinkedList<>();
+
+            String[] strArr = filePath.split(WhiteFile.separator);
+            for (int j = 0; j < strArr.length; j++) {
+                if (!"".equals(strArr[j]) && strArr[j] != null) {
+                    queue.add(strArr[j]);
+                }
+            }
+            if (queue.size() == 0) {
+                continue;
+            }
+            treeNode = fileDealComp.insertTreeNode(treeNode, id++, WhiteFile.separator, queue);
+        }
+        List<TreeNode> treeNodeList = treeNode.getChildren();
+        Collections.sort(treeNodeList, (o1, o2) -> {
+            long i = o1.getId() - o2.getId();
+            return (int) i;
+        });
+        result.setSuccess(true);
+        result.setData(treeNode);
+        return result;
     }
 
     @Operation(summary = "查询文件详情", description = "查询文件详情", tags = {"file"})

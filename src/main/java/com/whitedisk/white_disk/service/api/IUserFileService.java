@@ -22,4 +22,5 @@ public interface IUserFileService extends IService<UserFileEntity> {
     void deleteUserFile(String userFileId, JwtUser user);
     void userFileCopy(String userFileId, String newfilePath, String userId);
     void updateFilepathByUserFileId(String userFileId, String newfilePath, String userId);
+    List<UserFileEntity> selectFilePathTreeByUserId(String userId);
 }
