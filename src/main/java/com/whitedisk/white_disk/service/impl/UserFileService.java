@@ -21,6 +21,7 @@ import com.whitedisk.white_disk.service.api.IUserFileService;
 import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.vo.file.FileListVO;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.functors.ExceptionPredicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RestController;
@@ -170,6 +171,46 @@ public class UserFileService extends ServiceImpl<UserFileMapper, UserFileEntity>
                 }
             }
         }
+    }
+
+    @Override
+    public void updateFilepathByUserFileId(String userFileId, String newfilePath, String userId) {
+        UserFileEntity userFile = userFileMapper.selectById(userFileId);
+        String oldfilePath = userFile.getFilePath();
+        String fileName = userFile.getFileName();
+
+        userFile.setFilePath(newfilePath);
+        if (userFile.getIsDir() == 0) {
+            String repeatFileName = fileDealComp.getRepeatFileName(userFile, userFile.getFilePath());
+            userFile.setFileName(repeatFileName);
+        }
+
+        try {
+            userFileMapper.updateById(userFile);
+        } catch (Exception e) {
+            log.warn(e.getMessage());
+        }
+
+        oldfilePath = new WhiteFile(oldfilePath, fileName, true).getPath();
+        newfilePath = new WhiteFile(newfilePath, fileName, true).getPath();
+
+        //如果是文件夹，移动文件夹内的文件
+        if (userFile.isDirectory()) {
+            List<UserFileEntity> list = selectUserFileByLikeRightFilePath(oldfilePath, userId);
+            for (UserFileEntity newUserFile : list) {
+                newUserFile.setFilePath(newUserFile.getFilePath().replaceFirst(oldfilePath, newfilePath));
+                if (newUserFile.getIsDir() == 0){
+                    String repeatFileName = fileDealComp.getRepeatFileName(newUserFile, newUserFile.getFilePath());
+                    newUserFile.setFileName(repeatFileName);
+                }
+                try {
+                    userFileMapper.updateById(newUserFile);
+                } catch (Exception e) {
+                    log.warn(e.getMessage());
+                }
+            }
+        }
+
     }
 
 

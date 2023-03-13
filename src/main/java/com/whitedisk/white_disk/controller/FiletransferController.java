@@ -11,6 +11,7 @@ import com.qiwenshare.ufop.operation.download.domain.DownloadFile;
 import com.qiwenshare.ufop.operation.download.domain.Range;
 import com.qiwenshare.ufop.util.UFOPUtils;
 import com.whitedisk.white_disk.component.FileDealComp;
+import com.whitedisk.white_disk.dto.file.BatchDownloadFileDTO;
 import com.whitedisk.white_disk.dto.file.DownloadFileDTO;
 import com.whitedisk.white_disk.dto.file.PreviewDTO;
 import com.whitedisk.white_disk.dto.file.UploadFileDTO;
@@ -21,6 +22,7 @@ import com.whitedisk.white_disk.service.api.IFileService;
 import com.whitedisk.white_disk.service.api.IFileTransferService;
 import com.whitedisk.white_disk.service.api.IStorageService;
 import com.whitedisk.white_disk.service.api.IUserFileService;
+import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.vo.file.UploadFileVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,6 +42,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author white
@@ -220,7 +226,35 @@ public class FiletransferController {
         }
         //设置文件名
         httpServletResponse.addHeader("Content-Disposition", "attachment;fileName=" + fileName);
-        fileTransferService.
+        fileTransferService.downloadFile(httpServletResponse, downloadFileDTO);
+    }
+
+    @Operation(summary = "批量下载文件", description = "批量下载文件", tags = {"filetransfer"})
+    @GetMapping(value = "/batchDownloadFile")
+    @MyLog(operation = "批量下载文件", module = CURRENT_MODULE)
+    @ResponseBody
+    public void batchDownloadFile(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, BatchDownloadFileDTO batchDownloadFileDTO){
+        String Ids = batchDownloadFileDTO.getUserFileIds();
+        String[] userFileIdStrings = Ids.split(",");
+        List<String> userFileIds = new ArrayList<>();
+        for (String userFileId : userFileIdStrings) {
+            UserFileEntity userFile = userFileService.getById(userFileId);
+            if(userFile.getIsDir() == 0){
+                userFileIds.add(userFileId);
+            } else {
+                WhiteFile whiteFile = new WhiteFile(userFile.getFilePath(), userFile.getFileName(), true);
+                List<UserFileEntity> userFileList = userFileService.selectUserFileByLikeRightFilePath(whiteFile.getPath(), userFile.getUserId());
+                List<String> userFileIdsInDir = userFileList.stream().map(UserFileEntity::getUserFileId).collect(Collectors.toList());
+                userFileIds.add(userFile.getUserFileId());
+                userFileIds.addAll(userFileIdsInDir);
+            }
+        }
+        UserFileEntity userFile = userFileService.getById(userFileIdStrings[0]);
+        httpServletResponse.setContentType("application/force-download");
+        Date date = new Date();
+        String fileName = String.valueOf(date.getTime());
+        httpServletResponse.addHeader("Content-Disposition", "attachment;fileName=" + fileName + ".zip");// 设置文件名
+        fileTransferService.downloadUserFileList(httpServletResponse, userFile.getFilePath(), fileName, userFileIds);
     }
 
 }

@@ -8,14 +8,19 @@ import com.qiwenshare.common.util.security.JwtUser;
 import com.qiwenshare.common.util.security.SessionUtil;
 import com.whitedisk.white_disk.component.FileDealComp;
 import com.whitedisk.white_disk.dto.file.*;
+import com.whitedisk.white_disk.entity.UserFileEntity;
 import com.whitedisk.white_disk.service.api.IFileService;
 import com.whitedisk.white_disk.service.api.IUserFileService;
+import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.vo.file.FileDetailVO;
 import com.whitedisk.white_disk.vo.file.FileListVO;
 import com.whitedisk.white_disk.vo.file.SearchFileVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.Session;
+import org.apache.commons.lang3.StringUtils;
+import org.eclipse.jetty.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -154,6 +159,30 @@ public class FileController {
             return RestResult.fail().message("原路径与目标路径冲突，不能复制");
         }
         return RestResult.success();
+    }
+
+    @Operation(summary = "文件移动", description = "可以移动文件或者目录", tags = {"file"})
+    @PostMapping("/movefile")
+    @MyLog(operation = "文件移动", module = CURRENT_MODULE)
+    @ResponseBody
+    public RestResult<String> moveFile(@RequestBody MoveFileDTO moveFileDTO){
+        JwtUser jwtUser = SessionUtil.getSession();
+        UserFileEntity userFile = userFileService.getById(moveFileDTO.getUserFileId());
+        String oldPath = userFile.getFilePath();
+        String newPath = moveFileDTO.getFilePath();
+        String fileName = userFile.getFileName();
+        String extendName = userFile.getExtendName();
+        //是文件夹
+        if (StringUtil.isEmpty(extendName)) {
+            WhiteFile whiteFile = new WhiteFile(oldPath, fileName, true);
+            if (newPath.startsWith(whiteFile.getPath() + WhiteFile.separator) || newPath.equals(whiteFile.getPath())) {
+                return RestResult.fail().message("换个路径吧，别在一个文件夹里转悠");
+            }
+        }
+        userFileService.updateFilepathByUserFileId(moveFileDTO.getUserFileId(), newPath, jwtUser.getUserId());
+        fileDealComp.deleteRepeatSubDirFile(newPath, jwtUser.getUserId());
+        return RestResult.success();
+
     }
 
     @Operation(summary = "查询文件详情", description = "查询文件详情", tags = {"file"})
