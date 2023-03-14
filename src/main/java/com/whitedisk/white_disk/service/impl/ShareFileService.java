@@ -27,4 +27,9 @@ public class ShareFileService extends  ServiceImpl<ShareFileMapper, ShareFile> i
     public List<ShareFileListVO> selectShareFileList(String shareBatchNum, String filePath) {
         return shareFileMapper.selectShareFileList(shareBatchNum, filePath);
     }
+
+    @Override
+    public void batchInsertShareFile(List<ShareFile> shareFiles) {
+        shareFileMapper.batchInsertShareFile(shareFiles);
+    }
 }

@@ -11,4 +11,5 @@ import java.util.List;
  */
 public interface IShareFileService extends IService<ShareFile> {
     List<ShareFileListVO> selectShareFileList(String shareBatchNum, String filePath);
+    void batchInsertShareFile(List<ShareFile> shareFiles);
 }

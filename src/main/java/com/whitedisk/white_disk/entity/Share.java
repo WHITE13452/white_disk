@@ -29,8 +29,12 @@ public class Share {
     private String extractionCode;
 
     private String shareBatchNum;
-
+    /**
+     * 分享类型(0公共,1私密,2好友)
+     */
     private Integer shareType;
-
+    /**
+     * 分享状态(0正常,1已失效,2已撤销)
+     */
     private Integer shareStatus;
 }

@@ -6,6 +6,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.HighlighterEncoder;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -338,5 +339,28 @@ public class FileService extends ServiceImpl<FileMapper, FileEntity> implements 
         fileDetailVO.setMusic(music);
         fileDetailVO.setImage(image);
         return fileDetailVO;
+    }
+
+    @Override
+    public Long getFilePointCount(String fileId) {
+        LambdaQueryWrapper<UserFileEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserFileEntity::getFileId, fileId);
+        Long count = userFileMapper.selectCount(wrapper);
+        return count;
+    }
+
+    @Override
+    public void updateFileDetail(String userFileId, String identifier, long fileSize) {
+        UserFileEntity userFile = userFileMapper.selectById(userFileId);
+        String currentTime = DateUtil.getCurrentTime();
+        FileEntity fileEntity = new FileEntity();
+        fileEntity.setIdentifier(identifier);
+        fileEntity.setFileSize(fileSize);
+        fileEntity.setModifyTime(currentTime);
+        fileEntity.setModifyUserId(SessionUtil.getUserId());
+        fileEntity.setFileId(userFile.getFileId());
+        fileMapper.updateById(fileEntity);
+        userFile.setUploadTime(currentTime);
+        userFileMapper.updateById(userFile);
     }
 }

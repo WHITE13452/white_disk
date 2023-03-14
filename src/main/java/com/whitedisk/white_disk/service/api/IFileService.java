@@ -68,4 +68,19 @@ public interface IFileService extends IService<FileEntity> {
      */
     FileDetailVO getFileDetail(String userFileId);
 
+    /**
+     * 文件被引用次数
+     * @param fileId
+     * @return
+     */
+    Long getFilePointCount(String fileId);
+
+    /**
+     * 更新文本文件内容
+     * @param userFileId
+     * @param identifier
+     * @param fileSize
+     */
+    void updateFileDetail(String userFileId, String identifier, long fileSize);
+
 }

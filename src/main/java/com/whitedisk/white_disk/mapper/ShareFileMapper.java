@@ -12,4 +12,5 @@ import java.util.List;
  */
 public interface ShareFileMapper extends BaseMapper<ShareFile> {
     List<ShareFileListVO> selectShareFileList(@Param("shareBatchNum") String shareBatchNum, @Param("shareFilePath") String filePath);
+    void batchInsertShareFile(List<ShareFile> shareFiles);
 }

@@ -5,17 +5,19 @@ import cn.hutool.core.util.IdUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.qiwenshare.common.util.DateUtil;
 import com.qiwenshare.common.util.MusicUtils;
 import com.qiwenshare.ufop.factory.UFOPFactory;
+import com.qiwenshare.ufop.operation.copy.Copier;
+import com.qiwenshare.ufop.operation.copy.domain.CopyFile;
 import com.qiwenshare.ufop.operation.download.Downloader;
 import com.qiwenshare.ufop.operation.download.domain.DownloadFile;
+import com.qiwenshare.ufop.operation.write.Writer;
+import com.qiwenshare.ufop.operation.write.domain.WriteFile;
 import com.qiwenshare.ufop.util.UFOPUtils;
 import com.whitedisk.white_disk.config.es.ElasticSearchConfig;
 import com.whitedisk.white_disk.config.es.FileSearch;
-import com.whitedisk.white_disk.entity.Music;
-import com.whitedisk.white_disk.entity.Share;
-import com.whitedisk.white_disk.entity.ShareFile;
-import com.whitedisk.white_disk.entity.UserFileEntity;
+import com.whitedisk.white_disk.entity.*;
 import com.whitedisk.white_disk.mapper.FileMapper;
 import com.whitedisk.white_disk.mapper.MusicMapper;
 import com.whitedisk.white_disk.mapper.UserFileMapper;
@@ -24,6 +26,7 @@ import com.whitedisk.white_disk.utils.TreeNode;
 import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.utils.WhiteFileUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jaudiotagger.audio.AudioFile;
@@ -478,4 +481,46 @@ public class FileDealComp {
         return isExistPath;
     }
 
+    /**
+     * 拷贝文件
+     * 场景：修改的文件被多处引用时，需要重新拷贝一份，然后在新的基础上修改
+     * @param fileEntity
+     * @param userFile
+     * @return
+     */
+    public String copyFile(FileEntity fileEntity, UserFileEntity userFile) {
+        Copier copier = ufopFactory.getCopier();
+        Downloader downloader = ufopFactory.getDownloader(fileEntity.getStorageType());
+        DownloadFile downloadFile = new DownloadFile();
+        downloadFile.setFileUrl(fileEntity.getFileUrl());
+        CopyFile copyFile = new CopyFile();
+        copyFile.setExtendName(userFile.getExtendName());
+        String fileUrl = copier.copy(downloader.getInputStream(downloadFile), copyFile);
+        if (downloadFile.getOssClient() != null) {
+            downloadFile.getOssClient().shutdown();
+        }
+        fileEntity.setFileUrl(fileUrl);
+        fileEntity.setFileId(IdUtil.getSnowflakeNextIdStr());
+        fileMapper.insert(fileEntity);
+        userFile.setFileId(fileEntity.getFileId());
+        userFile.setUploadTime(DateUtil.getCurrentTime());
+        return fileUrl;
+    }
+
+    public void saveFileInputStream(int storageType, String fileUrl, InputStream inputStream) throws IOException {
+        Writer writer = ufopFactory.getWriter(storageType);
+        WriteFile writeFile = new WriteFile();
+        writeFile.setFileUrl(fileUrl);
+        int fileSize = inputStream.available();
+        writeFile.setFileSize(fileSize);
+        writer.write(inputStream, writeFile);
+    }
+
+    public String getIdentifierByFile(String fileUrl, int storageType) throws IOException{
+        DownloadFile downloadFile = new DownloadFile();
+        downloadFile.setFileUrl(fileUrl);
+        InputStream inputStream = ufopFactory.getDownloader(storageType).getInputStream(downloadFile);
+        String md5Str = DigestUtils.md5Hex(inputStream);
+        return md5Str;
+    }
 }

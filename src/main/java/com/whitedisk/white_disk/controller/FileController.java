@@ -8,6 +8,7 @@ import com.qiwenshare.common.util.security.JwtUser;
 import com.qiwenshare.common.util.security.SessionUtil;
 import com.whitedisk.white_disk.component.FileDealComp;
 import com.whitedisk.white_disk.dto.file.*;
+import com.whitedisk.white_disk.entity.FileEntity;
 import com.whitedisk.white_disk.entity.UserFileEntity;
 import com.whitedisk.white_disk.service.api.IFileService;
 import com.whitedisk.white_disk.service.api.IUserFileService;
@@ -26,6 +27,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -221,6 +225,7 @@ public class FileController {
     public RestResult<TreeNode> getFileTree(){
         RestResult<TreeNode> result = new RestResult<>();
         JwtUser jwtUser = SessionUtil.getSession();
+        //找到文件夹
         List<UserFileEntity> userFileList = userFileService.selectFilePathTreeByUserId(jwtUser.getUserId());
         TreeNode treeNode = new TreeNode();
         treeNode.setLabel(WhiteFile.separator);
@@ -252,6 +257,38 @@ public class FileController {
         result.setSuccess(true);
         result.setData(treeNode);
         return result;
+    }
+
+    @Operation(summary = "更新文件", description = "更新简单的文本文件", tags = {"file"})
+    @MyLog(operation = "更新文件", module = CURRENT_MODULE)
+    @PostMapping(value = "/update")
+    @ResponseBody
+    public RestResult<String> updateFile(@RequestBody UpdateFileDTO updateFileDTO) {
+        UserFileEntity userFile = userFileService.getById(updateFileDTO.getUserFileId());
+        FileEntity fileEntity = fileService.getById(userFile.getFileId());
+        Long filePointCount = fileService.getFilePointCount(fileEntity.getFileId());
+        String fileUrl = fileEntity.getFileUrl();
+        if (filePointCount > 1){
+            fileUrl = fileDealComp.copyFile(fileEntity, userFile);
+        }
+        String content = updateFileDTO.getFileContent();
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(content.getBytes());
+        try {
+            int fileSize = byteArrayInputStream.available();
+            fileDealComp.saveFileInputStream(fileEntity.getStorageType(), fileUrl, byteArrayInputStream);
+            String md5Str = fileDealComp.getIdentifierByFile(fileUrl, fileEntity.getStorageType());
+            fileService.updateFileDetail(userFile.getUserFileId(), md5Str, fileSize);
+
+        } catch (IOException e) {
+            throw new QiwenException(999999, "修改文件异常");
+        } finally {
+            try {
+                byteArrayInputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return RestResult.success().message("修改文件成功");
     }
 
     @Operation(summary = "查询文件详情", description = "查询文件详情", tags = {"file"})

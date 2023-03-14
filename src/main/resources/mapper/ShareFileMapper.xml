@@ -16,5 +16,11 @@
           and a.shareFilePath = #{shareFilePath}
     </select>
 
-
+    <insert id="batchInsertShareFile" parameterType="java.util.List">
+        INSERT ignore INTO sharefile (shareBatchNum, userFileId, shareFilePath)
+        VALUES
+        <foreach collection="list" item="file" index="index" separator=",">
+            (#{file.shareBatchNum}, #{file.userFileId}, #{file.shareFilePath})
+        </foreach>
+    </insert>
 </mapper>
