@@ -1,5 +1,6 @@
 package com.whitedisk.white_disk.controller;
 
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson2.JSON;
 import com.qiwenshare.common.anno.MyLog;
@@ -8,6 +9,7 @@ import com.qiwenshare.common.util.DateUtil;
 import com.qiwenshare.common.util.security.JwtUser;
 import com.qiwenshare.common.util.security.SessionUtil;
 import com.whitedisk.white_disk.component.FileDealComp;
+import com.whitedisk.white_disk.dto.file.SaveShareFileDTO;
 import com.whitedisk.white_disk.dto.file.ShareFileDTO;
 import com.whitedisk.white_disk.entity.Share;
 import com.whitedisk.white_disk.entity.ShareFile;
@@ -21,6 +23,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -95,5 +98,45 @@ public class ShareController {
         shareFileService.batchInsertShareFile(saveFileList);
         shareFileVO.setShareBatchNum(uuid);
         return RestResult.success().data(shareFileVO);
+    }
+
+    @Operation(summary = "保存分享文件", description = "用来将别人分享的文件保存到自己的网盘中", tags = {"share"})
+    @PostMapping(value = "/savesharefile")
+    @MyLog(operation = "保存分享文件", module = CURRENT_MODULE)
+    @Transactional(rollbackFor=Exception.class)
+    @ResponseBody
+    public RestResult saveShareFile(@RequestBody SaveShareFileDTO shareFileDTO){
+        JwtUser jwtUser = SessionUtil.getSession();
+        List<ShareFile> shareFileList = JSON.parseArray(shareFileDTO.getFiles(), ShareFile.class);
+        String saveFilePath = shareFileDTO.getFilePath();
+        String userId = jwtUser.getUserId();
+
+        List<UserFileEntity> saveUserFileList = new ArrayList<>();
+        for (ShareFile shareFile : shareFileList) {
+            UserFileEntity userFile = userFileService.getById(shareFile.getUserFileId());
+            String fileName = userFile.getFileName();
+            String saveFileName = fileDealComp.getRepeatFileName(userFile, saveFilePath);
+            if (userFile.getIsDir() == 1){
+                List<UserFileEntity> userFileList = userFileService.selectUserFileByLikeRightFilePath(
+                        new WhiteFile(userFile.getFilePath(), userFile.getFileName(), true).getPath(),
+                        userFile.getUserId());
+                log.info("查询文件列表：" + JSON.toJSONString(userFileList));
+                String filePath = userFile.getFilePath();
+                userFileList.forEach(p->{
+                    p.setUserFileId(IdUtil.getSnowflakeNextIdStr());
+                    p.setUserId(userId);
+                    p.setFilePath(p.getFilePath().replaceFirst(filePath + "/" + fileName, saveFilePath + "/" + saveFileName));
+                    saveUserFileList.add(p);
+                    log.info("当前文件：" + JSON.toJSONString(p));
+                });
+            }
+            userFile.setUserFileId(IdUtil.getSnowflakeNextIdStr());
+            userFile.setUserId(userId);
+            userFile.setFileName(saveFileName);
+            userFile.setFilePath(saveFilePath);
+        }
+        log.info("----------" + JSON.toJSONString(saveUserFileList));
+        userFileService.saveBatch(saveUserFileList);
+        return RestResult.success();
     }
 }
