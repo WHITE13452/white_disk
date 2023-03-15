@@ -7,7 +7,7 @@
 <mapper namespace="com.whitedisk.white_disk.mapper.ShareFileMapper">
 
 
-    <select id="selectShareFileList" resultType="com.whitedisk.white_disk.vo.file.ShareFileListVO">
+    <select id="selectShareFileList" resultType="com.whitedisk.white_disk.vo.share.ShareFileListVO">
         select * from sharefile a
                           LEFT JOIN share ON share.shareBatchNum = a.shareBatchNum
                           left join userfile b on b.userFileId = a.userFileId

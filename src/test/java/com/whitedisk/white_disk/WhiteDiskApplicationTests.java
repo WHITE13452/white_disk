@@ -1,5 +1,8 @@
 package com.whitedisk.white_disk;
 
+import com.qiwenshare.common.util.security.JwtUser;
+import com.whitedisk.white_disk.dto.file.CopyFileDTO;
+import com.whitedisk.white_disk.service.api.IFileService;
 import com.whitedisk.white_disk.service.api.IUserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +14,10 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
+import javax.annotation.Resource;
+
 import static jdk.nashorn.internal.runtime.regexp.joni.Config.log;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 @SpringBootTest
@@ -23,6 +29,8 @@ class WhiteDiskApplicationTests {
     IUserService userService;
     @Autowired
     private MockMvc mockMvc;
+    @Resource
+    IFileService fileService;
 
     @Test
     void contextLoads() throws Exception {
@@ -43,5 +51,17 @@ class WhiteDiskApplicationTests {
         String content=mvcResult.getResponse().getContentAsString();
         log.print(status);
         log.print(content);
+    }
+
+    @Test
+    public void testCopyFile() {
+        CopyFileDTO copyFileDTO = new CopyFileDTO();
+        copyFileDTO.setUserFileIds("001,002");
+        copyFileDTO.setFilePath("/foo/bar");
+
+        JwtUser user = new JwtUser();
+        user.setUserId("123456");
+
+        assertTrue(fileService.copyFile(copyFileDTO, user));
     }
 }

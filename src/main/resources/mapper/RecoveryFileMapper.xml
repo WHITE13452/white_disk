@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.whitedisk.white_disk.mapper.RecoveryFileMapper">
+
+<select id="selectRecoveryFileList" resultType="com.whitedisk.white_disk.vo.file.RecoveryFileListVo">
+    select * from recoveryfile a
+    left join userfile b on a.userFileId = b.userFileId
+    left join file c on c.fileId = b.fileId
+    where userId = #{userId}
+
+</select>
+</mapper>

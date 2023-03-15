@@ -2,7 +2,7 @@ package com.whitedisk.white_disk.service.api;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.whitedisk.white_disk.entity.ShareFile;
-import com.whitedisk.white_disk.vo.file.ShareFileListVO;
+import com.whitedisk.white_disk.vo.share.ShareFileListVO;
 
 import java.util.List;
 

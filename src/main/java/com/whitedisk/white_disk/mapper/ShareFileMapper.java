@@ -2,7 +2,7 @@ package com.whitedisk.white_disk.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.whitedisk.white_disk.entity.ShareFile;
-import com.whitedisk.white_disk.vo.file.ShareFileListVO;
+import com.whitedisk.white_disk.vo.share.ShareFileListVO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.whitedisk.white_disk.vo.file;
+package com.whitedisk.white_disk.vo.share;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -24,9 +24,6 @@ public class ShareFileListVO {
     private Integer storageType;
     @Schema(description="用户文件id")
     private String userFileId;
-//
-//    private Long userId;
-
     @Schema(description="文件名")
     private String fileName;
     @Schema(description="文件路径")
@@ -39,13 +36,6 @@ public class ShareFileListVO {
     private String uploadTime;
     @Schema(description="分享文件路径")
     private String shareFilePath;
-    //
-//    private Long shareId;
-//
-//    private String shareTime;
-//    private String endTime;
     private String extractionCode;
     private String shareBatchNum;
-//    private Integer shareType;//0公共，1私密，2好友
-//    private Integer shareStatus;//0正常，1已失效，2已撤销
 }

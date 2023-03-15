@@ -2,15 +2,16 @@ package com.whitedisk.white_disk.controller;
 
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RandomUtil;
+import co.elastic.clients.elasticsearch.features.ResetFeaturesRequest;
 import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.qiwenshare.common.anno.MyLog;
 import com.qiwenshare.common.result.RestResult;
 import com.qiwenshare.common.util.DateUtil;
 import com.qiwenshare.common.util.security.JwtUser;
 import com.qiwenshare.common.util.security.SessionUtil;
 import com.whitedisk.white_disk.component.FileDealComp;
-import com.whitedisk.white_disk.dto.file.SaveShareFileDTO;
-import com.whitedisk.white_disk.dto.file.ShareFileDTO;
+import com.whitedisk.white_disk.dto.file.*;
 import com.whitedisk.white_disk.entity.Share;
 import com.whitedisk.white_disk.entity.ShareFile;
 import com.whitedisk.white_disk.entity.UserFileEntity;
@@ -18,16 +19,23 @@ import com.whitedisk.white_disk.service.api.IShareFileService;
 import com.whitedisk.white_disk.service.api.IShareService;
 import com.whitedisk.white_disk.service.api.IUserFileService;
 import com.whitedisk.white_disk.utils.WhiteFile;
-import com.whitedisk.white_disk.vo.file.ShareFileVO;
+import com.whitedisk.white_disk.vo.share.ShareFileListVO;
+import com.whitedisk.white_disk.vo.share.ShareFileVO;
+import com.whitedisk.white_disk.vo.share.ShareListVO;
+import com.whitedisk.white_disk.vo.share.ShareTypeVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kotlin.jvm.internal.Lambda;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -139,4 +147,80 @@ public class ShareController {
         userFileService.saveBatch(saveUserFileList);
         return RestResult.success();
     }
+
+    @Operation(summary = "查看已分享列表", description = "查看已分享列表", tags = {"share"})
+    @GetMapping(value = "/shareList")
+    @ResponseBody
+    public RestResult<ShareListVO> shareFileList(ShareListDTO shareListDTO) {
+        JwtUser jwtUser = SessionUtil.getSession();
+        List<ShareListVO> shareList = shareService.selectShareList(shareListDTO, jwtUser.getUserId());
+        int total = shareService.selectShareListTotalCount(shareListDTO, jwtUser.getUserId());
+        return RestResult.success().dataList(shareList, total);
+
+    }
+
+    @Operation(summary = "分享文件列表", description = "分享列表", tags = {"share"})
+    @GetMapping(value = "/sharefileList")
+    @ResponseBody
+    public RestResult<ShareFileListVO> shareFileList(ShareFileListDTO shareFileListBySecretDTO) {
+        String shareBatchNum = shareFileListBySecretDTO.getShareBatchNum();
+        String shareFilePath = shareFileListBySecretDTO.getShareFilePath();
+        List<ShareFileListVO> list = shareFileService.selectShareFileList(shareBatchNum, shareFilePath);
+        for (ShareFileListVO shareFileListVO : list) {
+            shareFileListVO.setShareFilePath(shareFilePath);
+        }
+        return RestResult.success().dataList(list, list.size());
+    }
+
+    @Operation(summary = "分享类型", description = "可用此接口判断是否需要提取码", tags = {"share"})
+    @GetMapping(value = "/sharetype")
+    @ResponseBody
+    public RestResult<ShareTypeVO> shareType(ShareTypeDTO shareTypeDTO) {
+        LambdaQueryWrapper<Share> shareLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        shareLambdaQueryWrapper.eq(Share::getShareBatchNum, shareTypeDTO.getShareBatchNum());
+        Share share = shareService.getOne(shareLambdaQueryWrapper);
+        ShareTypeVO shareTypeVO = new ShareTypeVO();
+        shareTypeVO.setShareType(share.getShareType());
+        return RestResult.success().data(shareTypeVO);
+    }
+
+    @Operation(summary = "校验提取码", description = "校验提取码", tags = {"share"})
+    @GetMapping(value = "/checkextractioncode")
+    @ResponseBody
+    public RestResult<String> checkExtractionCode(CheckExtractionCodeDTO checkExtractionCodeDTO) {
+        LambdaQueryWrapper<Share> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Share::getExtractionCode, checkExtractionCodeDTO.getExtractionCode())
+                .eq(Share::getShareBatchNum, checkExtractionCodeDTO.getShareBatchNum());
+        List<Share> list = shareService.list(wrapper);
+        if (list.isEmpty()) {
+            return RestResult.fail().message("校验失败");
+        } else {
+            return RestResult.success();
+        }
+    }
+
+    @Operation(summary = "校验过期时间", description = "校验过期时间", tags = {"share"})
+    @GetMapping(value = "/checkendtime")
+    @ResponseBody
+    public RestResult<String> checkEndTime(CheckEndTimeDTO checkEndTimeDTO) {
+        LambdaQueryWrapper<Share> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Share::getShareBatchNum, checkEndTimeDTO.getShareBatchNum());
+        Share share = shareService.getOne(wrapper);
+        if (share == null) {
+            return RestResult.fail().message("文件不存在！");
+        }
+        String endTime = share.getEndTime();
+        Date endTimeDate = null;
+        try {
+            endTimeDate = DateUtil.getDateByFormatString(endTime, "yyyy-MM-dd HH:mm:ss");
+        } catch (ParseException e) {
+            log.error("日期格式解析失败：{}" , e);
+        }
+        if (new Date().after(endTimeDate)) {
+            return RestResult.fail().message("分享已过期");
+        } else {
+            return RestResult.success();
+        }
+    }
+
 }

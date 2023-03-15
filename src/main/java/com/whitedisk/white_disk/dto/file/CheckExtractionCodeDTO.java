@@ -1,4 +1,4 @@
-package com.whitedisk.white_disk.vo.file;
+package com.whitedisk.white_disk.dto.file;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -7,10 +7,9 @@ import lombok.Data;
  * @author white
  */
 @Data
-@Schema(description="分享文件VO")
-public class ShareFileVO {
+public class CheckExtractionCodeDTO {
     @Schema(description="批次号")
     private String shareBatchNum;
-    @Schema(description = "提取编码")
+    @Schema(description="提取码")
     private String extractionCode;
 }
