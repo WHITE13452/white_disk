@@ -11,4 +11,6 @@ import java.util.List;
  */
 public interface IRecoveryFileService extends IService<RecoveryFile> {
     List<RecoveryFileListVo> selectRecoveryFileList(String userId);
+    void restoreFile(String deleteBatchNum, String filePath, String sessionUserId);
+    void deleteUserFileByDeleteBatchNum(String deleteBatchNum);
 }

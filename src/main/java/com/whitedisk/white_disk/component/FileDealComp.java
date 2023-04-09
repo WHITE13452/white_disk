@@ -27,6 +27,7 @@ import com.whitedisk.white_disk.utils.WhiteFile;
 import com.whitedisk.white_disk.utils.WhiteFileUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jaudiotagger.audio.AudioFile;
@@ -132,39 +133,38 @@ public class FileDealComp {
     public String getRepeatFileName(UserFileEntity userFile, String savefilePath) {
         String fileName = userFile.getFileName();
         String extendName = userFile.getExtendName();
-        Integer deleteFlag = userFile.getDeleteFlag();
+
         String userId = userFile.getUserId();
         int isDir = userFile.getIsDir();
         LambdaQueryWrapper<UserFileEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper.eq(UserFileEntity::getFilePath, savefilePath)
-                .eq(UserFileEntity::getDeleteFlag, deleteFlag)
+                .eq(UserFileEntity::getDeleteFlag, 0)
                 .eq(UserFileEntity::getUserId, userId)
                 .eq(UserFileEntity::getFileName, fileName)
                 .eq(UserFileEntity::getIsDir, isDir);
-        if (userFile.getIsDir() == 0) {
+        if (userFile.isFile()) {
             lambdaQueryWrapper.eq(UserFileEntity::getExtendName, extendName);
         }
         List<UserFileEntity> list = userFileMapper.selectList(lambdaQueryWrapper);
-        if (list == null) {
+        if (CollectionUtils.isEmpty(list)) {
             return fileName;
         }
-        if (list.isEmpty()) {
-            return fileName;
-        }
+
         int i = 0;
 
-        while (list != null && !list.isEmpty()) {
+        while (!CollectionUtils.isEmpty(list)) {
             i++;
             LambdaQueryWrapper<UserFileEntity> lambdaQueryWrapper1 = new LambdaQueryWrapper<>();
             lambdaQueryWrapper1.eq(UserFileEntity::getFilePath, savefilePath)
-                    .eq(UserFileEntity::getDeleteFlag, deleteFlag)
+                    .eq(UserFileEntity::getDeleteFlag, 0)
                     .eq(UserFileEntity::getUserId, userId)
                     .eq(UserFileEntity::getFileName, fileName + "(" + i + ")")
                     .eq(UserFileEntity::getIsDir, isDir);
-            if (userFile.getIsDir() == 0) {
+            if (userFile.isFile()) {
                 lambdaQueryWrapper1.eq(UserFileEntity::getExtendName, extendName);
             }
             list = userFileMapper.selectList(lambdaQueryWrapper1);
+
         }
 
         return fileName + "(" + i + ")";
@@ -464,16 +464,16 @@ public class FileDealComp {
      * @param path
      * @return
      */
-    public boolean isExistPath(List<TreeNode> childrenTreeNodes, String path){
+    public boolean isExistPath(List<TreeNode> childrenTreeNodes, String path) {
         boolean isExistPath = false;
 
         try {
-            for (int i = 0; i < childrenTreeNodes.size(); i++){
-                if (path.equals(childrenTreeNodes.get(i).getLabel())){
+            for (TreeNode childrenTreeNode : childrenTreeNodes) {
+                if (path.equals(childrenTreeNode.getLabel())) {
                     isExistPath = true;
                 }
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 

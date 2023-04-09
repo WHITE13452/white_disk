@@ -9,7 +9,7 @@
     <select id="selectUserFileByLikeRightFilePath" resultType="com.whitedisk.white_disk.entity.UserFileEntity">
         select * from userfile
         where (filePath = #{filePath} or filePath like concat(#{filePath},'/%'))
-            and userId=#{userId};
+            and userId = #{userId}
             and deleteFlag = 0;
     </select>
 

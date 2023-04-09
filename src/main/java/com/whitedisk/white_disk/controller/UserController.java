@@ -109,12 +109,12 @@ public class UserController {
             userLoginInfo.setUserloginDate(DateUtil.getCurrentTime());
             userLoginInfoService.save(userLoginInfo);
             UserEntity user = userService.getById(sessionUserEntity.getUserId());
-            BeanUtils.copyProperties(user, userLoginInfo);
-            if (StringUtils.isEmpty(user.getWxOpenId())) {
-                userLoginVO.setHasWxAuth(false);
-            } else {
-                userLoginVO.setHasWxAuth(true);
-            }
+            BeanUtils.copyProperties(user, userLoginVO);
+//            if (StringUtils.isEmpty(user.getWxOpenId())) {
+//                userLoginVO.setHasWxAuth(false);
+//            } else {
+//                userLoginVO.setHasWxAuth(true);
+//            }
             return RestResult.success().data(userLoginVO);
         } else {
             return RestResult.fail().message("用户暂未登录");

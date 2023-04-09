@@ -1,5 +1,7 @@
 package com.whitedisk.white_disk.component;
 
+import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.qiwenshare.ufop.factory.UFOPFactory;
 import com.qiwenshare.ufop.operation.copy.domain.CopyFile;
 import com.qiwenshare.ufop.util.UFOPUtils;
@@ -7,6 +9,9 @@ import com.whitedisk.white_disk.entity.FileEntity;
 import com.whitedisk.white_disk.entity.UserFileEntity;
 import com.whitedisk.white_disk.mapper.FileMapper;
 import com.whitedisk.white_disk.mapper.UserFileMapper;
+import com.whitedisk.white_disk.service.api.IFileTransferService;
+import com.whitedisk.white_disk.service.api.IRecoveryFileService;
+import com.whitedisk.white_disk.service.api.IUserFileService;
 import com.whitedisk.white_disk.utils.WhiteFile;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -23,6 +28,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.cert.CertificateRevokedException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +44,10 @@ import java.util.concurrent.Future;
 public class AsyncTaskComp {
 
     @Resource
+    IFileTransferService fileTransferService;
+    @Resource
+    IRecoveryFileService recoveryFileService;
+    @Resource
     private UserFileMapper userFileMapper;
     @Resource
     private FileMapper fileMapper;
@@ -49,6 +59,46 @@ public class AsyncTaskComp {
     @Value("${ufop.storage-type}")
     private Integer storageType;
 
+    public Long getFilePointCount(String fileId) {
+        LambdaQueryWrapper<UserFileEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper.eq(UserFileEntity::getFileId, fileId);
+        return userFileMapper.selectCount(lambdaQueryWrapper);
+    }
+
+    public Future<String> deleteUserFile(String userFileId) {
+        UserFileEntity userFile = userFileMapper.selectById(userFileId);
+        if (userFile.getIsDir() == 1) {
+            LambdaQueryWrapper<UserFileEntity> userFileLambdaQueryWrapper = new LambdaQueryWrapper<>();
+            userFileLambdaQueryWrapper.eq(UserFileEntity::getDeleteBatchNum, userFile.getDeleteBatchNum());
+            List<UserFileEntity> userFileEntityList = userFileMapper.selectList(userFileLambdaQueryWrapper);
+            for (UserFileEntity userFileEntity : userFileEntityList) {
+                Long filePointCount = getFilePointCount(userFileEntity.getFileId());
+                if (filePointCount != null && filePointCount == 0 && userFileEntity.getIsDir() == 0) {
+                    FileEntity fileEntity = fileMapper.selectById(userFileEntity.getFileId());
+                    try {
+                        fileTransferService.deleteFile(fileEntity);
+                        fileMapper.deleteById(fileEntity.getFileId());
+                    } catch (Exception e) {
+                        log.error("删除本地文件失败：" + JSON.toJSONString(fileEntity));
+                    }
+                }
+            }
+        } else {
+            recoveryFileService.deleteUserFileByDeleteBatchNum(userFile.getDeleteBatchNum());
+            Long filePointCount = getFilePointCount(userFile.getFileId());
+
+            if (filePointCount != null && filePointCount == 0 && userFile.getIsDir() == 0) {
+                FileEntity fileEntity = fileMapper.selectById(userFile.getFileId());
+                try {
+                    fileTransferService.deleteFile(fileEntity);
+                    fileMapper.deleteById(fileEntity.getFileId());
+                } catch(Exception e) {
+                    log.error("删除本地文件失败：" + JSON.toJSONString(fileEntity));
+                }
+            }
+        }
+        return new AsyncResult<String>("deleteUserFile");
+    }
 
 
     public Future<String> checkESUserFileId(String userFileId){

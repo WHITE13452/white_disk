@@ -4,6 +4,7 @@ import com.qiwenshare.common.util.security.JwtUser;
 import com.whitedisk.white_disk.dto.file.DownloadFileDTO;
 import com.whitedisk.white_disk.dto.file.PreviewDTO;
 import com.whitedisk.white_disk.dto.file.UploadFileDTO;
+import com.whitedisk.white_disk.entity.FileEntity;
 import com.whitedisk.white_disk.entity.StorageEntity;
 import com.whitedisk.white_disk.vo.file.UploadFileVo;
 
@@ -29,4 +30,5 @@ public interface IFileTransferService {
 
     void downloadUserFileList(HttpServletResponse httpServletResponse, String filePath, String fileName, List<String> userFileIds);
 
+    void deleteFile(FileEntity fileEntity);
 }

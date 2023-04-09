@@ -81,7 +81,7 @@ public class FileController {
     @MyLog(operation = "搜索文件", module = CURRENT_MODULE)
     @GetMapping("/search")
     @ResponseBody
-    public RestResult<List<SearchFileVO>> searchFile(@RequestBody SearchFileDTO searchFileDTO){
+    public RestResult<List<SearchFileVO>> searchFile(SearchFileDTO searchFileDTO){
         JwtUser sessionUser = SessionUtil.getSession();
         List<SearchFileVO> searchFileVOList= fileService.searchFile(searchFileDTO,sessionUser);
         return RestResult.success().data(searchFileVOList);
@@ -109,7 +109,7 @@ public class FileController {
             @Parameter(description = "页面数量", required = true) long pageCount){
         JwtUser sessionUser = SessionUtil.getSession();
         if("0".equals(fileType)){
-            IPage<FileListVO> fileList = userFileService.userFileList(null,filePath,currentPage,currentPage);
+            IPage<FileListVO> fileList = userFileService.userFileList(null,filePath,currentPage,pageCount);
             return RestResult.success().dataList(fileList.getRecords(), fileList.getTotal());
         }else {
             IPage<FileListVO> fileList = userFileService.getFileByFileType(Integer.valueOf(fileType), currentPage, pageCount, sessionUser.getUserId());
@@ -123,9 +123,8 @@ public class FileController {
     @ResponseBody
     public RestResult<String> deleteBatchOfFile(@RequestBody BatchDeleteFileDTO batchDeleteFileDTO){
         JwtUser sessionUser = SessionUtil.getSession();
-        String file = batchDeleteFileDTO.getFiles();
-        String[] files = file.split(",");
-        for (String userFileId : files) {
+        String[] userFileIds = batchDeleteFileDTO.getUserFileIds().split(",");
+        for (String userFileId : userFileIds) {
             userFileService.deleteUserFile(userFileId,sessionUser);
             fileDealComp.deleteESByUserFileId(userFileId);
         }

@@ -13,6 +13,8 @@ import com.qiwenshare.ufop.constant.UploadFileStatusEnum;
 import com.qiwenshare.ufop.exception.operation.DownloadException;
 import com.qiwenshare.ufop.exception.operation.UploadException;
 import com.qiwenshare.ufop.factory.UFOPFactory;
+import com.qiwenshare.ufop.operation.delete.Deleter;
+import com.qiwenshare.ufop.operation.delete.domain.DeleteFile;
 import com.qiwenshare.ufop.operation.download.Downloader;
 import com.qiwenshare.ufop.operation.download.domain.DownloadFile;
 import com.qiwenshare.ufop.operation.preview.Previewer;
@@ -437,6 +439,15 @@ public class FileTransferService implements IFileTransferService {
                 file.delete();
             }
         }
+    }
+
+    @Override
+    public void deleteFile(FileEntity fileEntity) {
+        Deleter deleter = null;
+        deleter = ufopFactory.getDeleter(fileEntity.getStorageType());
+        DeleteFile deleteFile = new DeleteFile();
+        deleteFile.setFileUrl(fileEntity.getFileUrl());
+        deleter.delete(deleteFile);
     }
 
 

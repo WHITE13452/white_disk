@@ -192,7 +192,7 @@ public class FiletransferController {
 
     @Operation(summary = "下载文件", description = "下载文件", tags = {"filetransfer"})
     @GetMapping(value = "/downloadfile")
-    @MyLog(operation = "预览文件", module = CURRENT_MODULE)
+    @MyLog(operation = "下载文件", module = CURRENT_MODULE)
     @ResponseBody
     public void downloadFile(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, DownloadFileDTO downloadFileDTO){
         Cookie[] cookies = httpServletRequest.getCookies();
